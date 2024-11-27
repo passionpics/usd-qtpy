@@ -12,13 +12,6 @@ from .prim_type_icons import PrimTypeIconProvider
 
 log = logging.getLogger(__name__)
 
-# See: https://github.com/PixarAnimationStudios/OpenUSD/blob/release/pxr/usd/sdf/fileIO_Common.cpp#L879-L892  # noqa
-SPECIFIER_LABEL = {
-    Sdf.SpecifierDef: "def",
-    Sdf.SpecifierOver: "over",
-    Sdf.SpecifierClass: "abstract"
-}
-
 
 def shorten(s, width, placeholder="..."):
     """Shorten string to `width`"""
@@ -64,17 +57,55 @@ class MapProxyItem(Item):
         del self._proxy[self._key]
 
 
+class SpecInfoItem(Item):
+    """Item for SceneSpecInfo entries."""
+    def delete(self):
+        # Delete the info from the parent spec
+        parent = self.parent()
+        spec = parent.get("spec")
+        if not spec:
+            return
+
+        self.parent()["spec"].ClearInfo(self["name"])
+
+    def move(self, target_layer):
+        parent = self.parent()
+        spec = parent.get("spec")
+        if not spec:
+            return
+
+        layer = spec.layer
+        if layer == target_layer:
+            return
+
+        path = parent["path"]
+        prim_spec = Sdf.CreatePrimInLayer(target_layer, path)
+        prim_spec.SetInfo(self["name"], self["default"])
+        self.delete()
+
+
 class SpecifierDelegate(QtWidgets.QStyledItemDelegate):
     """Delegate for "specifier" key to allow editing via combobox"""
+    _VALUES = [[s.displayName, s] for s in Sdf.Specifier.allValues]
 
     def createEditor(self, parent, option, index):
         editor = QtWidgets.QComboBox(parent)
-        editor.addItems(list(SPECIFIER_LABEL.values()))
+        for label, value in self._VALUES:
+            editor.addItem(label, value)
+        editor.currentIndexChanged.connect(self.onIndexChanged)
+        editor.setFocusPolicy(QtCore.Qt.FocusPolicy.StrongFocus)
         return editor
 
     def setEditorData(self, editor, index):
         value = index.data(QtCore.Qt.EditRole)
-        editor.setCurrentText(value)
+        editor.setCurrentText(value.displayName)
+
+    def setModelData(self, editor, model, index):
+        model.setData(index, editor.currentData(), QtCore.Qt.EditRole)
+
+    @QtCore.Slot()
+    def onIndexChanged(self):
+        self.commitData.emit(self.sender())
 
 
 class StageSdfModel(TreeModel):
@@ -97,6 +128,7 @@ class StageSdfModel(TreeModel):
         "VariantSpec":  QtGui.QColor("#D6E8CC"),
         "variantSetName":  QtGui.QColor("#D6E8CC"),
         "variantSelections":  QtGui.QColor("#D6E8CC"),
+        "SceneSpecInfo":  QtGui.QColor("#D6E8CC"),
     }
 
     def __init__(self, stage=None, parent=None):
@@ -169,9 +201,7 @@ class StageSdfModel(TreeModel):
                             if icon:
                                 spec_item["icon"] = icon
 
-                    spec_item["specifier"] = SPECIFIER_LABEL.get(
-                        spec.specifier
-                    )
+                    spec_item["specifier"] = spec.specifier
                     type_name = spec.typeName
                     spec_item["typeName"] = type_name
 
@@ -241,6 +271,20 @@ class StageSdfModel(TreeModel):
                         ("variantSetName", _add_list_item),
                     ]:
                         add_fn(attr)
+                    if hasattr(spec, "ListInfoKeys"):
+                        for info in spec.ListInfoKeys():
+                            if info in ["specifier", "references", "payloads", "variantSelection"]:
+                                continue
+                            try:
+                                info_item = SpecInfoItem({
+                                    "name": info,
+                                    "default": spec.GetInfo(info),
+                                    "type": "SceneSpecInfo"
+                                })
+                            except Exception:
+                                log.warning("Failed to add SpecInfoItem (%s, %s)", info, spec)
+                                continue
+                            spec_item.add_child(info_item)
 
                 elif isinstance(spec, Sdf.AttributeSpec):
                     value = spec.default
@@ -282,10 +326,6 @@ class StageSdfModel(TreeModel):
             item = index.internalPointer()
             spec = item.get("spec")
             if spec and isinstance(spec, Sdf.PrimSpec):
-                lookup = {
-                    label: key for key, label in SPECIFIER_LABEL.items()
-                }
-                value = lookup[value]
                 spec.specifier = value
                 return True
 
@@ -298,6 +338,12 @@ class StageSdfModel(TreeModel):
             class_type_name = item.get("type")
             color = self.Colors.get(class_type_name)
             return color
+
+        if index.column() == 1 and role == QtCore.Qt.DisplayRole:
+            item = index.data(TreeModel.ItemRole)
+            specifier = item.get("specifier")
+            if specifier:
+                return specifier.displayName
 
         if index.column() == 2 and role == QtCore.Qt.DecorationRole:
             item = index.data(TreeModel.ItemRole)
@@ -343,8 +389,8 @@ class PrimSpectTypeFilterProxy(QtCore.QSortFilterProxyModel):
 
 
 class FilterListWidget(QtWidgets.QListWidget):
-    def __init__(self):
-        super(FilterListWidget, self).__init__()
+    def __init__(self, parent=None):
+        super(FilterListWidget, self).__init__(parent)
 
         # Some labels are indented just to easily visually group some related
         # options together
@@ -358,6 +404,7 @@ class FilterListWidget(QtWidgets.QListWidget):
             "    relocates",
             "AttributeSpec",
             "RelationshipSpec",
+            "SceneSpecInfo",
             "VariantSetSpec",
             "    VariantSpec",
             "    variantSetName",
@@ -378,6 +425,7 @@ class FilterListWidget(QtWidgets.QListWidget):
                 "A property that contains a reference to "
                 "one or more prim specs."
             ),
+            "SceneSpecInfo": "Metadata attached to the parent spec.",
             "VariantSetSpec": "A variant set.",
             "VariantSpec": "A single variant opinion for a variant set.",
             "variantSetName": "Defines available variant set name on a prim.",
@@ -411,12 +459,12 @@ class SpecEditorWindow(QtWidgets.QDialog):
         layout.setContentsMargins(0, 0, 0, 0)
         splitter = QtWidgets.QSplitter()
 
-        filter_list = FilterListWidget()
+        filter_list = FilterListWidget(self)
         filter_list.itemSelectionChanged.connect(
             self._on_filter_selection_changed
         )
 
-        editor = SpecEditsWidget(stage)
+        editor = SpecEditsWidget(stage, self)
 
         splitter.addWidget(filter_list)
         splitter.addWidget(editor)
@@ -586,10 +634,12 @@ class SpecEditsWidget(QtWidgets.QWidget):
                     remove_spec(spec)
             for deletable in deletables:
                 deletable.delete()
+            stage = self.model._stage
+            for layer in stage.GetLayerStack():
+                layer.RemoveInertSceneDescription()
         return True
 
     def on_delete(self):
-
         selection_model = self.view.selectionModel()
         rows = selection_model.selectedRows()
         has_deleted = self.delete_indexes(rows)
@@ -611,10 +661,13 @@ class SpecEditsWidget(QtWidgets.QWidget):
         specs = []
         for index in rows:
             item = index.data(TreeModel.ItemRole)
-            spec = item.get("spec")
             if item.get("type") == "PseudoRootSpec":
                 continue
+            elif item.get("type") == "SceneSpecInfo":
+                item.move(target_layer)
+                continue
 
+            spec = item.get("spec")
             if spec:
                 specs.append(spec)
 
