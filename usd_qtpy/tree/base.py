@@ -1,4 +1,4 @@
-from qtpy import QtCore
+from Qt import QtCore
 
 from .itemtree import ItemTree
 

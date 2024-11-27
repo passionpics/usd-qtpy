@@ -2,7 +2,7 @@ import logging
 import contextlib
 from typing import Union, Optional
 
-from qtpy import QtCore
+from Qt import QtCore
 from pxr import Usd, Sdf, Tf
 
 from .lib.qt import report_error

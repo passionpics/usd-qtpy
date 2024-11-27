@@ -1,7 +1,7 @@
 import contextlib
 import difflib
 
-from qtpy import QtWidgets, QtCore
+from Qt import QtWidgets, QtCore
 from pxr import Sdf, Tf
 
 from .lib.qt import DifflibSyntaxHighlighter

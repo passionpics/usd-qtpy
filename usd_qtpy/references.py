@@ -2,7 +2,7 @@ import os
 from collections import namedtuple, defaultdict
 from functools import partial
 
-from qtpy import QtWidgets, QtCore
+from Qt import QtWidgets, QtCore
 from pxr import Sdf, Usd
 
 from .resources import get_icon

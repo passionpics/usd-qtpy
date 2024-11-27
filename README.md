@@ -24,7 +24,7 @@ do:
 
 ```python
 from pxr import Usd
-from qtpy import QtWidgets
+from Qt import QtWidgets
 from usd_qtpy.editor import EditorWindow
 
 filepath = "/path/to/file.usd"
@@ -79,6 +79,6 @@ The Viewer utilities are basically using `usdviewq` which may or may not
 be included in your build. This also requires `PyOpenGL`. However, the other
 tools do not and are intended to rely solely on USD core and Qt itself.
 
-- qtpy 
+- Qt.py 
 - usd-core (when not using your own usd builds, install with `[usd]`)
 - PyOpenGL (needed for usd viewport, install with `[usdview]`; you will still need use a custom `usd` build yourself for `pxr.Usdviewq` dependency)

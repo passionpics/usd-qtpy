@@ -1,7 +1,7 @@
 import re
 import sys
 import logging
-from qtpy import QtCore, QtGui, QtWidgets
+from Qt import QtCore, QtGui, QtWidgets
 
 
 class SharedObjects:

@@ -1,7 +1,7 @@
 import logging
 from functools import partial
 
-from qtpy import QtWidgets, QtCore
+from Qt import QtWidgets, QtCore
 from pxr import Sdf
 
 from .lib.usd import (

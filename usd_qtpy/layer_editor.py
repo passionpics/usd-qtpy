@@ -5,7 +5,7 @@ import sys
 from functools import partial
 from typing import List
 
-from qtpy import QtWidgets, QtCore, QtGui
+from Qt import QtWidgets, QtCore, QtGui
 
 from pxr import Sdf, Usd, Tf
 

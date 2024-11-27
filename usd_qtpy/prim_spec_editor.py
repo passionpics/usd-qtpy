@@ -1,7 +1,7 @@
 import logging
 
 from pxr import Usd, Tf, Sdf
-from qtpy import QtCore, QtWidgets, QtGui
+from Qt import QtCore, QtWidgets, QtGui
 
 from .lib.qt import schedule, report_error
 from .lib.usd import remove_spec, LIST_ATTRS

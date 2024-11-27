@@ -1,13 +1,13 @@
-import qtpy
+import Qt
 
 
 initialized = False
 resources = None
-if qtpy.API == "pyside6":
+if Qt.__binding__ == "PySide6":
     from . import pyside6_resources as resources
-elif qtpy.API == "pyside2":
+elif Qt.__binding__ == "PySide2":
     from . import pyside2_resources as resources
-elif qtpy.API == "pyqt5":
+elif Qt.__binding__ == "PyQt5":
     from . import pyqt5_resources as resources
 
 

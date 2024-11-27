@@ -21,7 +21,7 @@ def main():
     # Import here so that one get the argparse help even if relevant libraries
     # are not installed
     from pxr import Usd  # noqa
-    from qtpy import QtWidgets  # noqa
+    from Qt import QtWidgets  # noqa
     from usd_qtpy.editor import EditorWindow  # noqa
     from usd_qtpy.style import load_stylesheet
 

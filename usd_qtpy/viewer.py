@@ -1,7 +1,7 @@
 import logging
 from functools import partial
 
-from qtpy import QtWidgets, QtCore, QtGui
+from Qt import QtWidgets, QtCore, QtGui
 
 from pxr import Usd, UsdGeom, Tf
 from pxr.Usdviewq.stageView import StageView

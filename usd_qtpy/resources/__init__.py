@@ -1,5 +1,5 @@
 import os
-from qtpy import QtGui
+from Qt import QtGui
 
 
 FEATHERICONS_ROOT = os.path.join(os.path.dirname(__file__), "feathericons")

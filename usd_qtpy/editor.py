@@ -1,6 +1,6 @@
 import logging
 
-from qtpy import QtWidgets, QtCore
+from Qt import QtWidgets, QtCore
 
 from . import (
     prim_hierarchy,
